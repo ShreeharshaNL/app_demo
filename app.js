@@ -14,17 +14,23 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 let userState = {};
 
 // ===================== GET (Webhook Verification) =====================
-app.get("/", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const challenge = req.query["hub.challenge"];
-  const token = req.query["hub.verify_token"];
+app.get('/', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const challenge = req.query['hub.challenge'];
+  const token = req.query['hub.verify_token'];
 
-  if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("✅ WEBHOOK VERIFIED");
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
+  // 👉 Only for Meta verification
+  if (mode && token) {
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      console.log("WEBHOOK VERIFIED");
+      return res.status(200).send(challenge);
+    } else {
+      return res.sendStatus(403);
+    }
   }
+
+  // 👉 Normal browser access
+  res.send("🚀 WhatsApp Bot is Running");
 });
 
 // ===================== POST (Incoming Messages) =====================
