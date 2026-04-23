@@ -10,7 +10,6 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
-// 🧠 State (temporary)
 let userState = {};
 
 // ===================== GET =====================
@@ -27,7 +26,7 @@ app.get("/", (req, res) => {
     }
   }
 
-  res.send("👗 Dress Shop Bot Running");
+  res.send("👗 StyleHub Running");
 });
 
 // ===================== POST =====================
@@ -60,35 +59,25 @@ app.post("/", async (req, res) => {
       await sendCategories(from);
     }
 
-    else if (listReply === "men") {
-      await sendMenCollection(from);
-    }
-
     else if (listReply === "women") {
-      await sendWomenCollection(from);
+      await sendWomenProducts(from);
     }
 
-    else if (listReply === "kids") {
-      await sendKidsCollection(from);
+    else if (listReply === "men") {
+      await sendMenProducts(from);
     }
 
-    else if (buttonReply === "shirt" || buttonReply === "floral" || buttonReply === "kidswear") {
+    // SELECT PRODUCT
+    else if (buttonReply === "floral_dress" || buttonReply === "party_gown" || buttonReply === "shirt") {
       userState[from].item = buttonReply;
       await askSize(from);
     }
 
-    else if (buttonReply === "S" || buttonReply === "M" || buttonReply === "L") {
+    // SIZE
+    else if (["S","M","L"].includes(buttonReply)) {
       userState[from].size = buttonReply;
       addToCart(from);
       await showCart(from);
-    }
-
-    else if (buttonReply === "view_more_women") {
-      await sendWomenCollection(from);
-    }
-
-    else if (buttonReply === "view_more_men") {
-      await sendMenCollection(from);
     }
 
     else if (buttonReply === "add_more") {
@@ -138,7 +127,7 @@ async function sendWelcome(to) {
     interactive: {
       type: "button",
       body: {
-        text: "👗 *StyleHub*\n\n✨ Trendy Fashion\n🔥 Best Prices\n\nStart shopping now!"
+        text: "👗 *StyleHub*\n\n✨ Premium Fashion\n🔥 Trending Styles\n🚚 Fast Delivery\n\nStart shopping 👇"
       },
       action: {
         buttons: [
@@ -160,16 +149,15 @@ async function sendCategories(to) {
     type: "interactive",
     interactive: {
       type: "list",
-      body: { text: "Choose a category 👇" },
+      body: { text: "Choose category 👇" },
       action: {
         button: "View",
         sections: [
           {
             title: "Collections",
             rows: [
-              { id: "men", title: "👔 Men" },
               { id: "women", title: "👗 Women" },
-              { id: "kids", title: "🧒 Kids" }
+              { id: "men", title: "👔 Men" }
             ]
           }
         ]
@@ -178,8 +166,10 @@ async function sendCategories(to) {
   });
 }
 
-// 👗 Women
-async function sendWomenCollection(to) {
+// 👗 WOMEN PRODUCTS (CARD STYLE)
+async function sendWomenProducts(to) {
+
+  // Product 1
   await sendMessage({
     messaging_product: "whatsapp",
     to,
@@ -187,7 +177,14 @@ async function sendWomenCollection(to) {
     image: {
       link: "https://images.unsplash.com/photo-1520975922284-9e0ce8270d0b"
     },
-    caption: "🌸 Floral Dress\n💰 ₹999"
+    caption:
+`🌸 *Floral Dress*
+
+✨ Elegant & Casual  
+⭐ 4.5 Rating  
+
+💰 *₹999*  
+🚚 Free Delivery`
   });
 
   await sendMessage({
@@ -196,19 +193,51 @@ async function sendWomenCollection(to) {
     type: "interactive",
     interactive: {
       type: "button",
-      body: { text: "Select 👇" },
+      body: { text: "Choose 👇" },
       action: {
         buttons: [
-          { type: "reply", reply: { id: "floral", title: "Buy Floral" } },
-          { type: "reply", reply: { id: "view_more_women", title: "View More" } }
+          { type: "reply", reply: { id: "floral_dress", title: "🛒 Add to Cart" } }
+        ]
+      }
+    }
+  });
+
+  // Product 2
+  await sendMessage({
+    messaging_product: "whatsapp",
+    to,
+    type: "image",
+    image: {
+      link: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c"
+    },
+    caption:
+`👗 *Party Gown*
+
+🔥 Premium Party Wear  
+⭐ 4.7 Rating  
+
+💰 *₹1999*  
+✨ Best Seller`
+  });
+
+  await sendMessage({
+    messaging_product: "whatsapp",
+    to,
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: "Choose 👇" },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "party_gown", title: "🛒 Add to Cart" } }
         ]
       }
     }
   });
 }
 
-// 👔 Men
-async function sendMenCollection(to) {
+// 👔 MEN PRODUCTS
+async function sendMenProducts(to) {
   await sendMessage({
     messaging_product: "whatsapp",
     to,
@@ -216,7 +245,13 @@ async function sendMenCollection(to) {
     image: {
       link: "https://images.unsplash.com/photo-1520975698519-59f7c8d9b5d3"
     },
-    caption: "👔 Shirt\n💰 ₹799"
+    caption:
+`👔 *Casual Shirt*
+
+🔥 Trending Style  
+⭐ 4.3 Rating  
+
+💰 *₹799*`
   });
 
   await sendMessage({
@@ -225,46 +260,17 @@ async function sendMenCollection(to) {
     type: "interactive",
     interactive: {
       type: "button",
-      body: { text: "Select 👇" },
+      body: { text: "Choose 👇" },
       action: {
         buttons: [
-          { type: "reply", reply: { id: "shirt", title: "Buy Shirt" } },
-          { type: "reply", reply: { id: "view_more_men", title: "View More" } }
+          { type: "reply", reply: { id: "shirt", title: "🛒 Add to Cart" } }
         ]
       }
     }
   });
 }
 
-// 🧒 Kids
-async function sendKidsCollection(to) {
-  await sendMessage({
-    messaging_product: "whatsapp",
-    to,
-    type: "image",
-    image: {
-      link: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9"
-    },
-    caption: "🧒 Kids Wear\n💰 ₹599"
-  });
-
-  await sendMessage({
-    messaging_product: "whatsapp",
-    to,
-    type: "interactive",
-    interactive: {
-      type: "button",
-      body: { text: "Select 👇" },
-      action: {
-        buttons: [
-          { type: "reply", reply: { id: "kidswear", title: "Buy Now" } }
-        ]
-      }
-    }
-  });
-}
-
-// 📏 Size
+// 📏 SIZE
 async function askSize(to) {
   await sendMessage({
     messaging_product: "whatsapp",
@@ -284,19 +290,17 @@ async function askSize(to) {
   });
 }
 
-// 🛒 Add to cart
+// 🛒 CART
 function addToCart(user) {
   const { item, size } = userState[user];
   userState[user].cart.push({ item, size });
 }
 
-// 🛒 Show cart
 async function showCart(to) {
-  const cart = userState[to].cart;
-
   let text = "🛒 *Your Cart*\n\n";
-  cart.forEach((c) => {
-    text += `✨ ${c.item.toUpperCase()} (Size: ${c.size})\n`;
+
+  userState[to].cart.forEach(c => {
+    text += `✨ ${c.item} (Size: ${c.size})\n`;
   });
 
   await sendMessage({
@@ -308,15 +312,15 @@ async function showCart(to) {
       body: { text },
       action: {
         buttons: [
-          { type: "reply", reply: { id: "add_more", title: "Continue" } },
-          { type: "reply", reply: { id: "checkout", title: "Checkout" } }
+          { type: "reply", reply: { id: "add_more", title: "➕ Continue" } },
+          { type: "reply", reply: { id: "checkout", title: "📦 Checkout" } }
         ]
       }
     }
   });
 }
 
-// 📍 Address
+// 📍 ADDRESS
 async function askAddress(to) {
   await sendMessage({
     messaging_product: "whatsapp",
@@ -325,17 +329,15 @@ async function askAddress(to) {
   });
 }
 
-// ✅ Confirm
+// ✅ CONFIRM
 async function confirmOrder(to) {
-  const user = userState[to];
+  let text = "✅ *Order Confirmed*\n\n";
 
-  let text = "✅ Order Confirmed!\n\n";
-
-  user.cart.forEach((c) => {
+  userState[to].cart.forEach(c => {
     text += `✨ ${c.item} (Size: ${c.size})\n`;
   });
 
-  text += `\n📍 ${user.address}\n\nThank you ❤️`;
+  text += `\n📍 ${userState[to].address}\n\n❤️ Thank you!`;
 
   await sendMessage({
     messaging_product: "whatsapp",
@@ -346,7 +348,5 @@ async function confirmOrder(to) {
   userState[to] = { step: "start", cart: [] };
 }
 
-// ===================== START =====================
-app.listen(PORT, () => {
-  console.log("🚀 Server running");
-});
+// =====================
+app.listen(PORT, () => console.log("🚀 Running"));
