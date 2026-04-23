@@ -10,27 +10,25 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
-// 🧠 Simple in-memory state (for testing)
+// 🧠 In-memory user state
 let userState = {};
 
 // ===================== GET (Webhook Verification) =====================
-app.get('/', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const challenge = req.query['hub.challenge'];
-  const token = req.query['hub.verify_token'];
+app.get("/", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const challenge = req.query["hub.challenge"];
+  const token = req.query["hub.verify_token"];
 
-  // 👉 Only for Meta verification
   if (mode && token) {
-    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-      console.log("WEBHOOK VERIFIED");
+    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+      console.log("✅ WEBHOOK VERIFIED");
       return res.status(200).send(challenge);
     } else {
       return res.sendStatus(403);
     }
   }
 
-  // 👉 Normal browser access
-  res.send("🚀 WhatsApp Bot is Running");
+  res.send("👗 Dress Shop Bot Running");
 });
 
 // ===================== POST (Incoming Messages) =====================
@@ -49,7 +47,7 @@ app.post("/", async (req, res) => {
 
     console.log("User:", text || buttonReply || listReply);
 
-    // Initialize user state
+    // Initialize state
     if (!userState[from]) {
       userState[from] = { step: "start", cart: [] };
     }
@@ -64,27 +62,31 @@ app.post("/", async (req, res) => {
       await sendCategories(from);
     }
 
-    else if (listReply === "fruits") {
-      await sendFruits(from);
+    else if (listReply === "men") {
+      await sendMenCollection(from);
     }
 
-    else if (buttonReply === "apple") {
-      userState[from].item = "Apple";
-      await askQuantity(from);
+    else if (listReply === "women") {
+      await sendWomenCollection(from);
     }
 
-    else if (buttonReply === "banana") {
-      userState[from].item = "Banana";
-      await askQuantity(from);
+    else if (listReply === "kids") {
+      await sendKidsCollection(from);
     }
 
-    else if (buttonReply === "qty_1") {
-      addToCart(from, 1);
-      await showCart(from);
+    // PRODUCT SELECTION
+    else if (buttonReply === "shirt" || buttonReply === "tshirt" ||
+             buttonReply === "floral" || buttonReply === "gown" ||
+             buttonReply === "kidswear") {
+
+      userState[from].item = buttonReply;
+      await askSize(from);
     }
 
-    else if (buttonReply === "qty_2") {
-      addToCart(from, 2);
+    // SIZE SELECTION
+    else if (buttonReply === "S" || buttonReply === "M" || buttonReply === "L") {
+      userState[from].size = buttonReply;
+      addToCart(from);
       await showCart(from);
     }
 
@@ -93,9 +95,11 @@ app.post("/", async (req, res) => {
     }
 
     else if (buttonReply === "checkout") {
+      userState[from].step = "address";
       await askAddress(from);
     }
 
+    // ADDRESS INPUT
     else if (userState[from].step === "address") {
       userState[from].address = text;
       await confirmOrder(from);
@@ -109,9 +113,7 @@ app.post("/", async (req, res) => {
   }
 });
 
-// ===================== FUNCTIONS =====================
-
-// 🔹 Send message helper
+// ===================== HELPER =====================
 async function sendMessage(data) {
   await axios.post(
     `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
@@ -125,7 +127,9 @@ async function sendMessage(data) {
   );
 }
 
-// 🔹 Welcome
+// ===================== UI MESSAGES =====================
+
+// 👗 Welcome
 async function sendWelcome(to) {
   await sendMessage({
     messaging_product: "whatsapp",
@@ -134,13 +138,13 @@ async function sendWelcome(to) {
     interactive: {
       type: "button",
       body: {
-        text: "👋 Welcome to FreshMart!\n\nWhat would you like to do?"
+        text: "👗 Welcome to StyleHub!\n\n✨ Trendy Fashion\n🔥 Best Prices\n\nWhat would you like to explore?"
       },
       action: {
         buttons: [
           {
             type: "reply",
-            reply: { id: "browse", title: "🛒 Browse Products" }
+            reply: { id: "browse", title: "🛍️ Browse Collection" }
           }
         ]
       }
@@ -148,7 +152,7 @@ async function sendWelcome(to) {
   });
 }
 
-// 🔹 Categories
+// 🛍️ Categories
 async function sendCategories(to) {
   await sendMessage({
     messaging_product: "whatsapp",
@@ -156,14 +160,16 @@ async function sendCategories(to) {
     type: "interactive",
     interactive: {
       type: "list",
-      body: { text: "🛒 Choose a category:" },
+      body: { text: "🛍️ Choose a category:" },
       action: {
-        button: "View",
+        button: "View Categories",
         sections: [
           {
-            title: "Categories",
+            title: "Collections",
             rows: [
-              { id: "fruits", title: "🍎 Fruits" }
+              { id: "men", title: "👔 Men" },
+              { id: "women", title: "👗 Women" },
+              { id: "kids", title: "🧒 Kids" }
             ]
           }
         ]
@@ -172,8 +178,8 @@ async function sendCategories(to) {
   });
 }
 
-// 🔹 Fruits
-async function sendFruits(to) {
+// 👔 Men
+async function sendMenCollection(to) {
   await sendMessage({
     messaging_product: "whatsapp",
     to,
@@ -181,26 +187,20 @@ async function sendFruits(to) {
     interactive: {
       type: "button",
       body: {
-        text: "🍎 Choose a fruit:"
+        text: "👔 Men's Collection:\n\n1. Shirt – ₹799\n2. T-Shirt – ₹499"
       },
       action: {
         buttons: [
-          {
-            type: "reply",
-            reply: { id: "apple", title: "Apple" }
-          },
-          {
-            type: "reply",
-            reply: { id: "banana", title: "Banana" }
-          }
+          { type: "reply", reply: { id: "shirt", title: "Shirt" } },
+          { type: "reply", reply: { id: "tshirt", title: "T-Shirt" } }
         ]
       }
     }
   });
 }
 
-// 🔹 Quantity
-async function askQuantity(to) {
+// 👗 Women
+async function sendWomenCollection(to) {
   await sendMessage({
     messaging_product: "whatsapp",
     to,
@@ -208,32 +208,74 @@ async function askQuantity(to) {
     interactive: {
       type: "button",
       body: {
-        text: "How many?"
+        text: "👗 Women's Collection:\n\n1. Floral Dress – ₹999\n2. Party Gown – ₹1999"
       },
       action: {
         buttons: [
-          { type: "reply", reply: { id: "qty_1", title: "1" } },
-          { type: "reply", reply: { id: "qty_2", title: "2" } }
+          { type: "reply", reply: { id: "floral", title: "Floral Dress" } },
+          { type: "reply", reply: { id: "gown", title: "Party Gown" } }
         ]
       }
     }
   });
 }
 
-// 🔹 Add to cart
-function addToCart(user, qty) {
-  const item = userState[user].item;
-  userState[user].cart.push({ item, qty });
+// 🧒 Kids
+async function sendKidsCollection(to) {
+  await sendMessage({
+    messaging_product: "whatsapp",
+    to,
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: {
+        text: "🧒 Kids Collection:\n\n1. Kids Wear – ₹599"
+      },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "kidswear", title: "Kids Wear" } }
+        ]
+      }
+    }
+  });
 }
 
-// 🔹 Show cart
+// 📏 Size
+async function askSize(to) {
+  await sendMessage({
+    messaging_product: "whatsapp",
+    to,
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: {
+        text: "📏 Select Size:"
+      },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "S", title: "S" } },
+          { type: "reply", reply: { id: "M", title: "M" } },
+          { type: "reply", reply: { id: "L", title: "L" } }
+        ]
+      }
+    }
+  });
+}
+
+// 🛒 Add to cart
+function addToCart(user) {
+  const { item, size } = userState[user];
+  userState[user].cart.push({ item, size });
+}
+
+// 🛒 Show cart
 async function showCart(to) {
   const cart = userState[to].cart;
 
   let text = "🛒 Your Cart:\n\n";
 
   cart.forEach((c, i) => {
-    text += `${i + 1}. ${c.item} × ${c.qty}\n`;
+    text += `${i + 1}. ${c.item} (Size: ${c.size})\n`;
   });
 
   await sendMessage({
@@ -245,24 +287,16 @@ async function showCart(to) {
       body: { text },
       action: {
         buttons: [
-          {
-            type: "reply",
-            reply: { id: "add_more", title: "➕ Add More" }
-          },
-          {
-            type: "reply",
-            reply: { id: "checkout", title: "📍 Add Address" }
-          }
+          { type: "reply", reply: { id: "add_more", title: "➕ Add More" } },
+          { type: "reply", reply: { id: "checkout", title: "📍 Add Address" } }
         ]
       }
     }
   });
 }
 
-// 🔹 Ask address
+// 📍 Address
 async function askAddress(to) {
-  userState[to].step = "address";
-
   await sendMessage({
     messaging_product: "whatsapp",
     to,
@@ -272,17 +306,17 @@ async function askAddress(to) {
   });
 }
 
-// 🔹 Confirm order
+// ✅ Confirm
 async function confirmOrder(to) {
   const user = userState[to];
 
   let text = "✅ Order Confirmed!\n\n";
 
   user.cart.forEach((c, i) => {
-    text += `${i + 1}. ${c.item} × ${c.qty}\n`;
+    text += `${i + 1}. ${c.item} (Size: ${c.size})\n`;
   });
 
-  text += `\n📍 Address: ${user.address}\n\nThank you ❤️`;
+  text += `\n📍 Address: ${user.address}\n\nThank you for shopping ❤️`;
 
   await sendMessage({
     messaging_product: "whatsapp",
@@ -290,11 +324,10 @@ async function confirmOrder(to) {
     text: { body: text }
   });
 
-  // reset user
   userState[to] = { step: "start", cart: [] };
 }
 
-// ===================== START SERVER =====================
+// ===================== START =====================
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
